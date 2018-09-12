@@ -54,6 +54,20 @@ def login(request):
     return redirect(login_url)
 
 
+def sync_user_with_sso(user, sso_profile):
+    user.nickName = email.split('@')[0]
+    user.first_name = sso_profile['first_name']
+    user.last_name = sso_profile['last_name']
+    user.sid = sso_profile['sid']
+    kaist_info = sso_profile.get('kaist_info')
+    if kaist_info:
+        employeeType = kaist_info.get('employeeType', '')
+        # Active 학생, 교수, 직원을 구성원으로 취급
+        user.is_kaistian = 'S' in employeeType or 'P' in employeeType or 'E' in employeeType
+        # 단, 교수 및 직원은 은퇴한 상태가 아니어야 함
+        user.is_kaistian = user.is_kaistian and 'R' not in employeetype
+    user.save()
+
 @require_http_methods(['GET'])
 def login_callback(request):
     print("login_callback")
@@ -68,24 +82,13 @@ def login_callback(request):
     email = sso_profile['email']
     user_list = PaperUser.objects.filter(email=email)
 
+    user = None
     if len(user_list) == 0:
-        print("new user")
         user = PaperUser.objects.create_user(email=email, password=email)
-        user.sid = sso_profile['sid']
-        # TODO sso유저 닉네임 설정
-        user.nickName = email.split('@')[0]
-        print("user's sid: {sid}".format(sid=user.sid))
-        user.save()
-
-
     else:
-        print("user exists")
         user = user_list[0]
-        user.nickName = email.split('@')[0]
-        user.first_name = sso_profile['first_name']
-        user.last_name = sso_profile['last_name']
-        user.sid = sso_profile['sid']
-        user.save()
+
+    sync_user_with_sso(user, sso_profile)
 
     next_path = '{0}{1}'.format(url_after_login, api_settings.JWT_ENCODE_HANDLER(
         api_settings.JWT_PAYLOAD_HANDLER(

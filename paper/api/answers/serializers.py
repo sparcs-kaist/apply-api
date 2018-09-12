@@ -52,8 +52,12 @@ class ParticipateCreateSerializer(serializers.ModelSerializer):
         answers_data = validated_data.pop('answers', None)
         try:
             participate = Participate.objects.create(**validated_data)
+            author = participate.author
+            paper = participate.paper
+            if paper.only_kaist and not author.is_kaistian:
+                raise AssertionError()
             if answers_data is None:
-                raise AssertionError
+                raise AssertionError()
             questions = Question.objects.filter(paper=participate.paper)
             for answer_data, question in zip(answers_data, questions):
                 if question.type == 'C' or question.type == 'R':
@@ -75,10 +79,10 @@ class ParticipateCreateSerializer(serializers.ModelSerializer):
                         raise AssertionError()
                     Answer.objects.create(participate=participate, question=question, **answer_data)
                 else: #unintended type
-                    raise AssertionError
-        except ObjectDoesNotExist or AssertionError:
+                    raise AssertionError()
+        except (ObjectDoesNotExist, AssertionError) as e:
             participate.delete()
-            return HttpResponse(status=400)
+            raise serializers.ValidationError('Unexpected participate data')
         return participate
 
     def update(self, instance, validated_data):
@@ -115,7 +119,7 @@ class ParticipateCreateSerializer(serializers.ModelSerializer):
                     target_answer.save()
 
             except AssertionError:
-                return HttpResponse(status=400) #인식을 못함
+                raise serializers.ValidationError('Unexpected participate data')
         return instance
 
 class ParticipateSerializer(serializers.ModelSerializer):

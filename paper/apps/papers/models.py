@@ -18,6 +18,7 @@ class Paper(TimeStampedModel, HavingAuthorModel):
                                      options={'quality': 60},
                                      )
     poster_url = models.URLField(null=True)
+    only_kaist = models.BooleanField(default=False, null=False)
 
     @property
     def is_finished(self):

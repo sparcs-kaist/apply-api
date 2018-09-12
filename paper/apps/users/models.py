@@ -40,6 +40,7 @@ class PaperUser(AbstractBaseUser, PermissionsMixin):
     is_superuser = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
+    is_kaistian = models.BooleanField(default=False)
     joined_date = models.DateField(auto_now_add=True)
     profile_image = models.FileField(upload_to='users/profile/')
     sid = models.CharField(max_length=30, default=0)
